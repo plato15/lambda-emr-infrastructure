@@ -1,0 +1,609 @@
+AWSTemplateFormatVersion: 2010-09-09
+Description: >-
+  This is a template for building AWS EMR environment.   It
+  includes Lambda, EMR & Roles, and Security Groups.  (c) 2019 Amazon Web Services, Inc. or
+  its affiliates. All Rights Reserved.  This AWS Content is provided subject to
+  the terms of the AWS Customer Agreement available at
+  http://aws.amazon.com/agreement or other written agreement between Customer
+  and Amazon Web Services, Inc.'
+
+Metadata:
+  'AWS::CloudFormation::Interface':
+    ParameterGroups:
+      - Label:
+          default: EMR Subnet
+        Parameters:
+          - VPCId
+          - Subnet
+      - Label:
+          default: EMR Lambda function
+        Parameters:
+          - EMRLambdaFunctionName
+          - S3SolutionCodeBucket
+          - EmrLogBucket
+          - LambdaCodeS3Location
+          - EMRHandler
+          - MemorySize
+          - Timeout
+          - LambdaRoleName
+          - LambdapolicyName
+          - EMRJobName
+          - EMRAppName
+      - Label:
+          default: EMR Settings
+        Parameters:
+          - EMRInstanceSize
+          - InstanceCount
+          - MasterSGName
+          - SlaveSGName
+          - ServiceSGName
+          - EMRInstanceProfileName
+          - EMREC2RoleName
+          - EMRServiceRoleName
+          - EMRPolicyName
+          - EmrBootstrapKey1
+          - EmrBootstrapArgKey1
+          - EmrBootstrapKey2
+          - MasterSGTagName
+          - SlaveSGTagName
+          - ServiceSGTagName
+          - EMREC2RoleResourcesAccessArns1
+          - EMREC2RoleResourcesAccessArns2
+          - EmrVersion
+      - Label:
+          default: Tags
+        Parameters:
+          - TagName
+    ParameterLabels:
+      VPCId:
+        default: VPC ID to Deploy resources
+      Subnet:
+        default: Subnet ID to Deploy resources
+      EmrBootstrapKey1:
+        default: s3 directory of emr bootstrap script 1
+      EmrBootstrapArgKey1:
+        default: s3 directory of emr argument bootstrap script
+      EmrBootstrapKey2:
+        default: s3 directory of emr bootstrap script 2
+      LambdapolicyName:
+        default: Name of policy attached to the EMR lambda role
+      EMRLambdaFunctionName:
+        default: EMR Lambda Function Name
+      EMRInstanceProfileName:
+        default: Profile Name of EMR Instance
+      S3SolutionCodeBucket:
+        default: Code Bucket
+      EMRInstanceSize:
+        default: EMR instance Size
+      EMRServiceRoleName:
+        default: Service Role name for EMR
+      EMREC2RoleName:
+        default: Name of EMR EC2 Name
+      EMRHandler:
+        default: EMR Lambda Handler Name
+      EMRPolicyName:
+        default: Name of policy that will be attached to EMR role
+      EMRJobName:
+        default: Name of EMR Job
+      InstanceCount:
+        default: Number of EMR Instance
+      LambdaRoleName:
+        default: Name of role used by emr lambda
+      MemorySize:
+        default: Memory Allocated
+      LambdaCodeS3Location:
+        default: >-
+          Location/name of the ZIP file in S3 that contains the Lambda function
+          code.
+      MasterSGName:
+        default: EMR Master SG Name
+      ServiceSGName:
+        default: EMR Service SG Name
+      SlaveSGName:
+        default: EMR Slave SG Name
+      MasterSGTagName:
+        default: EMR Master SG Name Tag
+      ServiceSGTagName:
+        default: EMR Service SG Name Tag
+      SlaveSGTagName:
+        default: EMR Slave SG Name Tag
+      EMREC2RoleResourcesAccessArns1:
+        default: The Arns of the s3 directory where EMREC2Role can list bucket
+      EMREC2RoleResourcesAccessArns2:
+        default: The Arns of the s3 directory where EMREC2Role can write bucket
+      TagName:
+        default: emr tag name
+      Timeout:
+        default: Lambda Timeout
+      EmrVersion:
+        default: ERM Version/releaselabel
+      EmrLogBucket:
+        default: Bucket name to store EMR Logs
+      EMRAppName:
+        default: Name of EMR App
+Parameters:
+  EmrBootstrapKey1:
+    Type: String
+    Default: s3://saidatech-datalake-coderepo-test/bootstrap-scripts/setup.sh
+  EmrBootstrapArgKey1:
+    Type: String
+    Default: s3://saidatech-datalake-coderepo-test/bootstrap-scripts
+  EmrBootstrapKey2:
+    Type: String
+    Default: s3://saidatech-datalake-coderepo-test/bootstrap-scripts/terminate_idle_cluster.sh
+  LambdapolicyName:
+    Type: String
+    Description: Name of lambda policy to be attached to lambda role
+    Default: lambda-create-emr-policy
+  EMRJobName:
+    Type: String
+    Description: Give your EMR Job a name
+    Default: preprocess-data-for-ml
+  EMREC2RoleName:
+    Type: String
+    Default: EMR_EC2Role
+  EMRInstanceProfileName:
+    Type: String
+    Default: EMRInstanceProfile
+  EMRLambdaFunctionName:
+    Type: String
+    Default: create-emr-with-steps
+  EMRPolicyName:
+    Type: String
+    Default: EMREC2Policy
+  EMRServiceRoleName:
+    Type: String
+    Default: EMRServiceRole
+  EMRHandler:
+    ConstraintDescription: Please specify a value.
+    Default: main.lambda_handler
+    Description: Name of the function code Lambda will call.
+    MinLength: '1'
+    Type: String
+  EMRInstanceSize:
+    Type: String
+    Default: r5.12xlarge
+  InstanceCount:
+    Type: String
+    Default: '2'
+  LambdaRoleName:
+    Description: DataLake-lambda-execution-emr-test
+    Type: String
+    Default: DataLake-LambdaCreateEmrRole-test
+  MemorySize:
+    AllowedValues:
+      - '128'
+      - '192'
+      - '256'
+      - '320'
+      - '384'
+      - '448'
+      - '512'
+      - '576'
+      - '640'
+      - '704'
+      - '768'
+      - '832'
+      - '896'
+      - '960'
+      - '1024'
+      - '1088'
+      - '1152'
+      - '1216'
+      - '1280'
+      - '1344'
+      - '1408'
+      - '1472'
+      - '1536'
+    ConstraintDescription: please specify a valid selection.
+    Default: '128'
+    Description: Choose a vlaue for your lambda memory
+    Type: Number
+  LambdaCodeS3:
+    ConstraintDescription: Please specify a value.
+    Default: lambda-codes/lambda-spin-emr.zip
+    Description: >-
+      Location/name of the ZIP file in S3 that contains the Lambda function
+      code.
+    MinLength: '1'
+    Type: String
+      Location/name of the ZIP file in S3 that contains the Crawler Lambda
+      function code.
+    MinLength: '1'
+    Type: String
+  CodeRepoS3BucketName:
+    AllowedPattern: '[a-z0-9]+(?!.*(\.)\1)(?:(?!\-\.)[a-z0-9\-\.])+[a-z0-9]+'
+    ConstraintDescription: >-
+      Please specify a name for the bucket that is from 3 to 63 characters long,
+      that starts and ends with alphanumeric characters.  The name can contain
+      hyphens and dots but cannot contain consecutive dots.
+    Description: >-
+      Please specify the name for the bucket that contains the ZIP file with the
+      Lambda function code.
+    MaxLength: '63'
+    MinLength: '3'
+    Type: String
+    Default: saidatech-datalake-coderepo-test
+  EmrLogBucket:
+    AllowedPattern: '[a-z0-9]+(?!.*(\.)\1)(?:(?!\-\.)[a-z0-9\-\.])+[a-z0-9]+'
+    ConstraintDescription: >-
+      Please specify a name for the bucket that is from 3 to 63 characters long,
+      that starts and ends with alphanumeric characters.  The name can contain
+      hyphens and dots but cannot contain consecutive dots.
+    Description: >-
+      Please specify the name for the bucket where EMR logs will be stored
+    MaxLength: '63'
+    MinLength: '3'
+    Type: String
+    Default: saidatech-datalake-emrlogs-test
+  ServiceSGName:
+    Type: String
+    Default: SG-EMRService
+  SlaveSGName:
+    Type: String
+    Default: SG-EMRSlave
+  MasterSGName:
+    Type: String
+    Default: SG-EMRMaster
+  MasterSGTagName:
+        Type: String
+        Default: SG-EMRMaster
+  SlaveSGTagName:
+        Type: String
+        Default: SG-EMRSlave
+  ServiceSGTagName:
+        Type: String
+        Default: SG-EMRService
+  TagEmrName:
+    Type: String
+    Default: etl-preprocess
+  Timeout:
+    ConstraintDescription: please specify a valid value.
+    Default: '120'
+    Description: >-
+      Function execution time, in seconds, for the Lambda function.  Min: 3,
+      max: 300.
+    MaxValue: '300'
+    MinValue: '3'
+    Type: Number
+  VPCId:
+    Type: 'AWS::EC2::VPC::Id'
+  Subnet:
+    Type: 'AWS::EC2::Subnet::Id'
+  EMREC2RoleResourcesAccessArns1:
+    Type: 'String'
+    Default: "arn:aws:s3:::saidatech-datalake-*-test" #,arn:aws:s3:::saidatech-datalake-emr-codes-test,arn:aws:s3:::saidatech-datalake-emr-logs-nontest"
+  EMREC2RoleResourcesAccessArns2:
+    Type: 'String'
+    Default: "arn:aws:s3:::saidatech-datalake-raw-test/*,arn:aws:s3:::saidatech-datalake-outputdata-test/*,arn:aws:s3:::saidatech-datalake-emrlogs-test/*,arn:aws:s3:::saidatech-datalake-coderepo-test/*" #"arn:aws:s3:::saidatech-sandbox-datalake-curated-nontest/*,arn:aws:s3:::saidatech-sandbox-emrprocess-test/elasticmapreduce/*,arn:aws:s3:::saidatech-sandbox-emrprocess-test/emr_lambda_scripts/*"
+  EmrVersion:
+    Type: 'String'
+    Default: 'emr-5.30.0'
+  EmrAppName:
+    Type: 'String'
+    Default: 'ETL-DataPreprocess'
+Resources:
+  EMRLambda:
+    Type: 'AWS::Lambda::Function'
+    Properties:
+      Handler: !Ref EMRHandler
+      Runtime: python3.7
+      FunctionName: !Ref EMRLambdaFunctionName
+      MemorySize: !Ref MemorySize
+      Timeout: !Ref Timeout
+      Code:
+        S3Bucket: !Ref CodeRepoS3BucketName
+        S3Key: !Ref LambdaCodeS3
+      Role: !GetAtt
+        - LambdaRole
+        - Arn
+      Environment:
+        Variables:
+          instance_size: !Ref EMRInstanceSize
+          instance_count: !Ref InstanceCount
+          subnet_id: !Ref Subnet
+          mastersg_id: !GetAtt
+            - EMRMasterSG
+            - GroupId
+          slavesg_id: !GetAtt
+            - EMRSlaveSG
+            - GroupId
+          servicesg_id: !GetAtt
+            - EMRServiceSG
+            - GroupId
+          job_name: !Ref EMRJobName
+          jobflow_role: !Ref EMRInstanceProfileName
+          service_role: !Ref EMRServiceRoleName
+          tag_emr_name: !Ref TagEmrName
+          emr_log_bucket: !Ref EmrLogBucket
+          emr_bootstrap_key1: !Ref EmrBootstrapKey1
+          emr_bootstrap_arg_key1: !Ref EmrBootstrapArgKey1
+          emr_bootstrap_key2: !Ref EmrBootstrapKey2
+          emr_version: !Ref EmrVersion
+          emr_app_name: !Ref EmrAppName
+
+
+  LambdaRole:
+    Type: 'AWS::IAM::Role'
+    Properties:
+      RoleName: !Ref LambdaRoleName
+      AssumeRolePolicyDocument:
+        Version: 2012-10-17
+        Statement:
+          - Effect: Allow
+            Principal:
+              Service:
+                - lambda.amazonaws.com
+            Action:
+              - 'sts:AssumeRole'
+      Path: /
+      Policies:
+        - PolicyName: !Ref LambdapolicyName
+          PolicyDocument:
+            Version: 2012-10-17
+            Statement:
+              - Effect: Allow
+                Action:
+                  - 'elasticmapreduce:OpenEditorInConsole'
+                  - 'elasticmapreduce:PutAutoScalingPolicy'
+                  - 'elasticmapreduce:CreateEditor'
+                  - 'elasticmapreduce:ModifyCluster'
+                  - 'elasticmapreduce:CreateSecurityConfiguration'
+                  - 'elasticmapreduce:SetTerminationProtection'
+                  - 'elasticmapreduce:AddInstanceGroups'
+                  - 'elasticmapreduce:ModifyInstanceFleet'
+                  - 'elasticmapreduce:StartEditor'
+                  - 'elasticmapreduce:RemoveAutoScalingPolicy'
+                  - 'elasticmapreduce:ModifyInstanceGroups'
+                  - 'elasticmapreduce:StopEditor'
+                  - 'elasticmapreduce:AddInstanceFleet'
+                  - 'elasticmapreduce:RunJobFlow'
+                  - 'elasticmapreduce:AddJobFlowSteps'
+                  - 'iam:PassRole'
+                Resource: "*"
+      ManagedPolicyArns:
+        - !Join
+          - ':'
+          - - 'arn'
+            - !Ref 'AWS::Partition'
+            - 'iam::aws:policy/service-role/AWSLambdaBasicExecutionRole'
+
+  EMREC2InstanceProfile:
+    Type: 'AWS::IAM::InstanceProfile'
+    Properties:
+      Roles:
+        - !Ref EMREC2Role
+      InstanceProfileName: !Ref EMRInstanceProfileName
+  EMRServiceRole:
+    Type: 'AWS::IAM::Role'
+    Properties:
+      RoleName: !Ref EMRServiceRoleName
+      AssumeRolePolicyDocument:
+        Version: 2012-10-17
+        Statement:
+          - Effect: Allow
+            Principal:
+              Service:
+                - elasticmapreduce.amazonaws.com
+            Action:
+              - 'sts:AssumeRole'
+      Path: /
+      ManagedPolicyArns:
+        - !Join
+          - ':'
+          - - 'arn'
+            - !Ref 'AWS::Partition'
+            - 'iam::aws:policy/service-role/AmazonElasticMapReduceRole'
+
+  EMREC2Role:
+    Type: 'AWS::IAM::Role'
+    Properties:
+      RoleName: !Ref EMREC2RoleName
+      AssumeRolePolicyDocument:
+        Version: 2012-10-17
+        Statement:
+          - Effect: Allow
+            Principal:
+              Service:
+                - ec2.amazonaws.com
+            Action:
+              - 'sts:AssumeRole'
+      Path: /
+      Policies:
+        - PolicyName: !Ref EMRPolicyName
+          PolicyDocument:
+            Version: 2012-10-17
+            Statement:
+              - Effect: Allow
+                Action: 's3:List*'
+                Resource: !Split [",", !Ref EMREC2RoleResourcesAccessArns1]
+                Sid: ListBucket
+              - Effect: Allow
+                Action:
+                  - 's3:Get*'
+                  - 's3:Put*'
+                  - 's3:DeleteObject'
+                Resource: !Split [",", !Ref EMREC2RoleResourcesAccessArns2]
+                Sid: WriteBucket
+              - Effect: Allow
+                Action:
+                  - 'ec2:Describe*'
+                  - 'elasticmapreduce:Describe*'
+                  - 'elasticmapreduce:ListBootstrapActions'
+                  - 'elasticmapreduce:ListClusters'
+                  - 'elasticmapreduce:ListInstanceGroups'
+                  - 'elasticmapreduce:ListInstances'
+                  - 'elasticmapreduce:ListSteps'
+                Resource: "*"
+
+  EMRServiceRoleCleanup:
+    Type: 'AWS::IAM::ServiceLinkedRole'
+    Properties:
+      AWSServiceName: elasticmapreduce.amazonaws.com
+      Description: Service linked role for EMR
+
+
+######################################################### Security Groups
+  EMRMasterSG:
+    Type: 'AWS::EC2::SecurityGroup'
+    Properties:
+      VpcId: !Ref VPCId
+      GroupName: !Ref MasterSGName
+      GroupDescription: Master group for Elastic MapReduce
+      Tags:
+        - Key: "Name"
+          Value: "MasterSGTagName"
+  EMRSlaveSG:
+    Type: 'AWS::EC2::SecurityGroup'
+    Properties:
+      VpcId: !Ref VPCId
+      GroupName: !Ref SlaveSGName
+      GroupDescription: Slave group for Elastic MapReduce
+      Tags:
+        - Key: "Name"
+          Value: "SlaveSGTagName"
+  EMRServiceSG:
+    Type: 'AWS::EC2::SecurityGroup'
+    Properties:
+      VpcId: !Ref VPCId
+      GroupName: !Ref ServiceSGName
+      GroupDescription: Service Security group for Elastic MapReduce
+      Tags:
+        - Key: "Name"
+          Value: "ServiceSGTagName"
+
+
+  MasterSecurityGroupIngress1:
+    Type: AWS::EC2::SecurityGroupIngress
+    Properties:
+      GroupId: !Ref EMRMasterSG
+      IpProtocol: tcp
+      FromPort: 0
+      ToPort: 65535
+      SourceSecurityGroupId: !Ref EMRMasterSG
+
+  MasterSecurityGroupIngress2:
+    Type: AWS::EC2::SecurityGroupIngress
+    Properties:
+      GroupId: !Ref EMRMasterSG
+      IpProtocol: tcp
+      FromPort: 0
+      ToPort: 65535
+      SourceSecurityGroupId: !Ref EMRSlaveSG
+
+  MasterSecurityGroupIngress3:
+    Type: AWS::EC2::SecurityGroupIngress
+    Properties:
+      GroupId: !Ref EMRMasterSG
+      IpProtocol: udp
+      FromPort: 0
+      ToPort: 65535
+      SourceSecurityGroupId: !Ref EMRMasterSG
+
+  MasterSecurityGroupIngress4:
+    Type: AWS::EC2::SecurityGroupIngress
+    Properties:
+      GroupId: !Ref EMRMasterSG
+      IpProtocol: udp
+      FromPort: 0
+      ToPort: 65535
+      SourceSecurityGroupId: !Ref EMRSlaveSG
+
+  MasterSecurityGroupIngress5:
+    Type: AWS::EC2::SecurityGroupIngress
+    Properties:
+      GroupId: !Ref EMRMasterSG
+      IpProtocol: icmp
+      FromPort: -1
+      ToPort: -1
+      SourceSecurityGroupId: !Ref EMRMasterSG
+
+  MasterSecurityGroupIngress6:
+    Type: AWS::EC2::SecurityGroupIngress
+    Properties:
+      GroupId: !Ref EMRMasterSG
+      IpProtocol: icmp
+      FromPort: -1
+      ToPort: -1
+      SourceSecurityGroupId: !Ref EMRSlaveSG
+
+  MasterSecurityGroupIngress7:
+    Type: AWS::EC2::SecurityGroupIngress
+    Properties:
+      GroupId: !Ref EMRMasterSG
+      IpProtocol: tcp
+      FromPort: 8443
+      ToPort: 8443
+      SourceSecurityGroupId: !Ref EMRServiceSG
+
+  SlaveSecurityGroupIngress1:
+    Type: AWS::EC2::SecurityGroupIngress
+    Properties:
+      GroupId: !Ref EMRSlaveSG
+      IpProtocol: tcp
+      FromPort: 0
+      ToPort: 65535
+      SourceSecurityGroupId: !Ref EMRMasterSG
+
+  SlaveSecurityGroupIngress2:
+    Type: AWS::EC2::SecurityGroupIngress
+    Properties:
+      GroupId: !Ref EMRSlaveSG
+      IpProtocol: tcp
+      FromPort: 0
+      ToPort: 65535
+      SourceSecurityGroupId: !Ref EMRSlaveSG
+
+  SlaveSecurityGroupIngress3:
+    Type: AWS::EC2::SecurityGroupIngress
+    Properties:
+      GroupId: !Ref EMRSlaveSG
+      IpProtocol: udp
+      FromPort: 0
+      ToPort: 65535
+      SourceSecurityGroupId: !Ref EMRMasterSG
+
+  SlaveSecurityGroupIngress4:
+    Type: AWS::EC2::SecurityGroupIngress
+    Properties:
+      GroupId: !Ref EMRSlaveSG
+      IpProtocol: udp
+      FromPort: 0
+      ToPort: 65535
+      SourceSecurityGroupId: !Ref EMRSlaveSG
+
+  SlaveSecurityGroupIngress5:
+    Type: AWS::EC2::SecurityGroupIngress
+    Properties:
+      GroupId: !Ref EMRSlaveSG
+      IpProtocol: icmp
+      FromPort: -1
+      ToPort: -1
+      SourceSecurityGroupId: !Ref EMRMasterSG
+
+  SlaveSecurityGroupIngress6:
+    Type: AWS::EC2::SecurityGroupIngress
+    Properties:
+      GroupId: !Ref EMRSlaveSG
+      IpProtocol: icmp
+      FromPort: -1
+      ToPort: -1
+      SourceSecurityGroupId: !Ref EMRSlaveSG
+
+  SlaveSecurityGroupIngress7:
+    Type: AWS::EC2::SecurityGroupIngress
+    Properties:
+      GroupId: !Ref EMRSlaveSG
+      IpProtocol: tcp
+      FromPort: 8443
+      ToPort: 8443
+      SourceSecurityGroupId: !Ref EMRServiceSG
+
+  ServiceSecurityGroupIngress:
+    Type: AWS::EC2::SecurityGroupIngress
+    Properties:
+      GroupId: !Ref EMRServiceSG
+      IpProtocol: tcp
+      FromPort: 9443
+      ToPort: 9443
+      SourceSecurityGroupId: !Ref EMRMasterSG

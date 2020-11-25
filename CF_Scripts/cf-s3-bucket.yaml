@@ -1,0 +1,48 @@
+AWSTemplateFormatVersion: 2010-09-09
+Parameters:
+  RawInputBucket:
+    Description: Please enter the name of the bucket where you raw data input will live
+    Type: String
+    Default: saidatech-datalake-raw-test
+  DataOutputBucket:
+    Description: Please enter the name of the bucket where you raw data input will live
+    Type: String
+    Default: saidatech-datalake-outputdata-test
+  CodeRepoBucket:
+    Description: Please enter the name of the bucket where you raw data input will live
+    Type: String
+    Default: saidatech-datalake-coderepo-test
+  EmrLogss3Bucket:
+    Description: Please enter the name of the bucket where you raw data input will live
+    Type: String
+    Default: saidatech-datalake-emrlogs-test
+  
+Resources:
+  InputBucket:
+    Type: AWS::S3::Bucket
+    Properties:
+      BucketName: !Ref RawInputBucket
+      Tags: 
+        - Key: Name
+          Value: InputData
+  OutputBucket:
+    Type: AWS::S3::Bucket
+    Properties:
+      BucketName: !Ref DataOutputBucket
+      Tags: 
+        - Key: Name
+          Value: OutputData
+  CodeBucket:
+    Type: AWS::S3::Bucket
+    Properties:
+      BucketName: !Ref CodeRepoBucket
+      Tags: 
+        - Key: Name
+          Value: CodeRepo
+  EMRLogBucket:
+    Type: AWS::S3::Bucket
+    Properties:
+      BucketName: !Ref EmrLogss3Bucket
+      Tags: 
+        - Key: Name
+          Value: emrlogs
