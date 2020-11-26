@@ -267,9 +267,11 @@ Parameters:
     MinValue: '3'
     Type: Number
   VPCId:
-    Type: vpc-04961cdb101e46c99 #'AWS::EC2::VPC::Id'
+    Type: 'String' #'AWS::EC2::VPC::Id'
+    Default: vpc-04961cdb101e46c99
   Subnet:
-    Type: subnet-08d3b87ce6c211596 #'AWS::EC2::Subnet::Id'
+    Type: 'String' #'AWS::EC2::Subnet::Id'
+    Default: subnet-08d3b87ce6c211596
   EMREC2RoleResourcesAccessArns1:
     Type: 'String'
     Default: "arn:aws:s3:::saidatech-datalake-*-test" #,arn:aws:s3:::saidatech-datalake-emr-codes-test,arn:aws:s3:::saidatech-datalake-emr-logs-nontest"
